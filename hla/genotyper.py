@@ -333,8 +333,7 @@ def main(argv):
 		flog.write("Exons read for genotyping " + g + ": " + ", ".join(want_exons[g]) + "\n")
 
 	basename = os.path.basename(options.bamfile)
-	print
-	"Opening", options.bamfile
+	print("Opening " + options.bamfile)
 
 	if options.readlen == 0:
 		options.readlen = read_length(options.bamfile)
@@ -542,8 +541,7 @@ def main(argv):
 	for g in hla_genes_to_call:
 		n = 0
 		bam_gene_alleles = allele_list[g]
-		print
-		"Calculating Probabilities for", g, "Genotype Calls"
+		print("Calculating Probabilities for " + g + " Genotype Calls")
 		for h1 in sorted(bam_gene_alleles):
 			for h2 in sorted(bam_gene_alleles):
 				if (h1 <= h2):
