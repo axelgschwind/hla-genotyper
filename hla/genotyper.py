@@ -579,13 +579,14 @@ def main(argv):
 		total_reads = mapped_read_total.get(h1, 0) + unmapped_read_total.get(h1, 0) + mapped_read_total.get(h2, 0) + unmapped_read_total.get(h2, 0)
 		delta = max_prob - total_prob
 		pval = numpy.exp(delta)
+		print(pval)
 
 		qc = "Pass"
 		if pval < 0.66:  # Ambiguous set for below 0.66
 			qc = "Ambiguous"
 		if gene_read_total[g] < 10:
 			qc = "Low Coverage"
-			pval = "NA"
+			pval = math.nan
 
 		flog.write( basename + "\t" + study_id + "\t" + options.ethnicity + "\t" + g + "\t" + h1 + "\t" + h2 + "\t" + str(pval)[0:4] + "\t" + qc + "\t" + str(mapped_read_total.get(h1, 0)) + "\t" + 
 			str(unmapped_read_total.get(h1, 0)) + "\t" + str(mapped_read_total.get(h2, 0)) + "\t" + str(unmapped_read_total.get(h2, 0)) + "\t" + str(total_reads) + "\n")
