@@ -8,6 +8,7 @@ import sys
 import math
 import pysam
 import sys
+from packaging import version
 import numpy
 import csv
 import operator
@@ -231,7 +232,7 @@ def main(argv):
 		argv.append("--help")
 	#      print "EP:",ETHNIC_PRIORS
 	usage = "usage: %prog [options] BAMFILE"
-	desc = "hla-genotyper predicts HLA genotypes from RNA-Seq and DNA-Seq bam files."
+	desc = "hla-genotyper " + version.Version + " predicts HLA genotypes from RNA-Seq and DNA-Seq bam files."
 	parser = OptionParser(usage=usage, description=desc)
 	#      parser.add_option("-b", "--bam", action="store", type="string", dest="bamfile",help="BAM file (sorted and indexed by position)")
 	parser.add_option("-u", "--unmapped_bam", action="store", type="string", default="None", dest="unmapped_bamfile",
@@ -271,6 +272,8 @@ def main(argv):
 		print
 		"For help, hla-genotyper --help"
 		exit(-1)
+	print
+	"HLA-Genotyper Version:", version.Version
 	if options.bamfile == None:
 		#         parser.print_help()
 		print
