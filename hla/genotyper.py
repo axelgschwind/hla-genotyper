@@ -109,7 +109,6 @@ def CN(filename):
 	# get Center id from bam file (1000 Genomes Center use different Exome Kits)
 	bamfile = pysam.Samfile(filename, 'rb')
 	header = bamfile.header.copy()
-	#    print header["RG"]
 	cn_id = "NA"
 	if "CN" in header.keys():
 		cn_id = header["RG"][0].get("CN", "NA")
@@ -133,30 +132,19 @@ class AutoVivification(dict):
 			return value
 
 
-# import os
-# import csv
-# import operator
-
-
 def hla_freq(ethnicity, gene):
 	this_dir, this_filename = os.path.split(__file__)
 	ETHNIC_PRIORS = os.path.join(this_dir, "data/ethnic_priors.txt")
 	prior = {}
-	# with open('data/ethnic_priors.txt', 'rb') as f:
 	with open(ETHNIC_PRIORS, 'r') as f:
 		reader = csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE,
 								fieldnames=["ethnicity", "gene", "allele", "freq"])
-		print(reader)
 		for row in reader:
 			if (ethnicity == row["ethnicity"]):
-				#                         print row["ethnicity"], row["gene"], row["allele"],row["freq"]
-				#                  if float(row["freq"]) > 0.001:
 				if gene == row["gene"]:
 					prior[row["allele"]] = float(row["freq"])
 				elif gene == "all":
 					prior[row["allele"]] = float(row["freq"])
-	#                          prior[get_hla_gene(row["allele"])][row["allele"]]=float(row["freq"])
-	#                          print  row["allele"],prior[row["allele"]]
 	f.close()
 	sorted_prior = sorted(prior.items(), key=operator.itemgetter(0))
 	return prior
@@ -171,7 +159,6 @@ def hla_loci(ethnicity, gene):
 								fieldnames=["ethnicity", "gene", "allele", "freq"])
 		for row in reader:
 			if (ethnicity == row["ethnicity"]):
-				#                  if float(row["freq"]) > 0.001:
 				hla_loci = hla_loci | set([get_hla_gene(row["allele"])])
 	f.close()
 	return sorted(hla_loci)
@@ -206,7 +193,6 @@ def hla_exon_region(gene, exon, EXON_INFO):
 		for row in reader:
 			if gene == row["gene"]:
 				if exon == row["exon"]:
-					#                     region= [row["start"],row["stop"]]
 					start = int(row["start"])
 					stop = int(row["stop"])
 	f.close()
@@ -230,11 +216,9 @@ def main(argv):
 	HLA_DATA = os.path.join(this_dir, "data/hla.dat")
 	if len(argv) == 1:
 		argv.append("--help")
-	#      print "EP:",ETHNIC_PRIORS
 	usage = "usage: %prog [options] BAMFILE"
 	desc = "hla-genotyper predicts HLA genotypes from RNA-Seq and DNA-Seq bam files."
 	parser = OptionParser(usage=usage, description=desc)
-	#      parser.add_option("-b", "--bam", action="store", type="string", dest="bamfile",help="BAM file (sorted and indexed by position)")
 	parser.add_option("-u", "--unmapped_bam", action="store", type="string", default="None", dest="unmapped_bamfile",
 					  help="BAM file of unmapped READs (optional)")
 	parser.add_option("-e", "--ethnicity", action="store", dest="ethnicity", type='choice',
@@ -247,7 +231,6 @@ def main(argv):
 					  help="Minimum mapping quality of aligned reads  [default: %default]")
 	parser.add_option("-q", "--qual", action="store", type="int", dest="bq", default=5,
 					  help="Min base quality for read  [default: %default]")
-	# parser.add_option("-v", "--verbose", action="store_true", dest="verbose")
 	parser.add_option("--debug", action="store_true", dest="debug")
 	parser.add_option("--rnaseq", action="store_true", dest="rnaseq", help="Indicates RNA-Seq BAM file")
 	parser.add_option("--exome", action="store_true", dest="exome", help="Indicates Whole Exome BAM file")
@@ -265,61 +248,41 @@ def main(argv):
 		options.bamfile = args[0]
 	else:
 		parser.print_help()
-		print
-		"ERROR: BAMFILE argument is required"
-		print
-		"usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam"
-		print
-		"For help, hla-genotyper --help"
+		print("ERROR: BAMFILE argument is required")
+		print("usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam")
+		print("For help, hla-genotyper --help")
 		exit(-1)
 	if options.bamfile == None:
-		#         parser.print_help()
-		print
-		"ERROR: BAMFILE is a required argument"
-		print
-		"usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam"
-		print
-		"For help, type: hla-genotyper --help"
+		print("ERROR: BAMFILE is a required argument")
+		print("usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam")
+		print("For help, type: hla-genotyper --help")
 		exit(-1)
 	else:
 		# check for file
 		if os.path.isfile(options.bamfile) is False:
-			print
-			print
-			"ERROR: The bam file specified ", options.bamfile, "was not found."
-			print
-			"usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam"
-			print
-			"For help, type: hla-genotyper --help"
-			print
+			print("ERROR: The bam file specified " + options.bamfile + "was not found.")
+			print("usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam")
+			print("For help, type: hla-genotyper --help")
 			exit(-1)
 	if options.ethnicity == None:
-		print
-		print
-		"ERROR: ethnicity is a required parameter"
-		print
-		"usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam"
+		print("ERROR: ethnicity is a required parameter")
+		print("usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam")
 		exit(-1)
 	if options.unmapped_bamfile != "None":
 		if os.path.isfile(options.unmapped_bamfile) is False:
-			print
-			print
-			"ERROR: The unmapped bam file specified ", options.unmapped_bamfile, "was not found."
-			print
+			print("ERROR: The unmapped bam file specified ", options.unmapped_bamfile, "was not found.")
 			parser.print_help()
 			exit(-1)
 	if options.sample == None:
 		study_id = SM(options.bamfile)
 	else:
 		study_id = options.sample
-	print
-	"Sample=", study_id
+	print("Sample=" + study_id)
 	if options.cn == "None":
 		cn_id = CN(options.bamfile)
 	else:
 		cn_id = options.cn
-	print
-	"Sequencing Center=", cn_id
+	print("Sequencing Center=" + cn_id)
 	# open log and output files
 	prefix = ""
 	if options.rnaseq:
@@ -328,22 +291,17 @@ def main(argv):
 		prefix = "hla." + options.ethnicity + "." + study_id + ".exome"
 	elif options.genome:
 		prefix = "hla." + options.ethnicity + "." + study_id + ".genome"
-	else:
-		prefix = "hla." + options.ethnicity + "." + study_id
 
 	if prefix == "":
-		print
-		print
-		"ERROR: Required option missing. Please specify sequencing type with --rnaseq, --exome, or --genome"
-		print
+		print("ERROR: Required option missing. Please specify sequencing type with --rnaseq, --exome, or --genome\n")
 		exit(-1)
 	else:
 		if options.outdir != None:
 			if os.path.isdir(options.outdir):
 				prefix = options.outdir + "/" + prefix
-			else:
-				print
-				"ERROR: Output directory,", options.outdir, ", does not exist."
+		else:
+			print("ERROR: Output directory," + str(options.outdir) + ", does not exist.")
+			exit(-1)
 	fout = open(prefix + ".txt", "w")
 	out = csv.writer(fout, delimiter="\t")
 	out.writerow(
@@ -373,10 +331,7 @@ def main(argv):
 	for g in hla_genes_to_call:
 		want_exons[g] = hla_typing_exons(g)
 		flog.write("Exons read for genotyping " + g + ": " + ", ".join(want_exons[g]) + "\n")
-	# want_exons=hla.typing_exons("HLA-"+options.gene)
 
-	# print "SM:",SM(options.bamfile)
-	# 
 	basename = os.path.basename(options.bamfile)
 	print
 	"Opening", options.bamfile
@@ -385,7 +340,7 @@ def main(argv):
 		options.readlen = read_length(options.bamfile)
 	flog.write("Read lengths:" + str(options.readlen)  + "\n")
 	read_len = options.readlen
-	# print >>flog,"Verbose setting:",options.verbose
+
 	this_dir, this_filename = os.path.split(__file__)
 	HLA_DATA = os.path.join(this_dir, "data/hla.dat")
 	flog.write("IMGT Database=" + HLA_DATA + "\n")
@@ -396,8 +351,7 @@ def main(argv):
 	n_hla_alleles = 0;
 	n_hla_reads = 0;
 	hla_read = AutoVivification()
-	print
-	"Reading HLA.dat database"
+	print("Reading HLA.dat database")
 	# read in hla database and create hash of all possible reads whose length match bam file
 	for seq_record in SeqIO.parse(HLA_DATA, "imgt"):
 		# parse hla info from record description
@@ -433,9 +387,6 @@ def main(argv):
 							last_position = e.location.start.position
 					for i in range(0, len(exon_seq) - read_len + 1):
 						myread = exon_seq[i:i + read_len]
-						#                 if hla_4digit == "HLA-B*50:01" :
-						#                     print "debug e=",e.qualifiers["number"][0],i,i+read_len,str(seq_record.description),hla_allele,hla_4digit,myread
-						#                 hla_read[myread][hla_4digit]=hla_read[myread].get(hla_4digit,0)+1
 						hla_read[myread][hla_4digit] = 1
 						n_hla_reads += 1
 				else:
@@ -443,10 +394,6 @@ def main(argv):
 					exons = [f for f in seq_record.features if f.type == "exon"]
 					introns = [f for f in seq_record.features if f.type == "intron"]
 					extra = 0
-					if hla_gene in ["HLA-C", "HLA-DQA1", "HLA-DQB1", "HLA-DRB1"] and len(introns) > 2:
-						#              extra=50  # caused problems when one hla had introns and another did not
-						extra = 0  # test hla-drb1*08:01 calls
-					#              print "intron len",hla_gene,len(introns),len(exons)
 					for e in exons:
 						if e.qualifiers["number"][0] in want_exons[hla_gene]:
 							exon_seq = seq_record.seq[
@@ -456,9 +403,6 @@ def main(argv):
 								hla_read[myread][hla_4digit] = 1
 								n_hla_reads += 1
 
-	#                 for k,v in hla_read.iteritems():
-	#                   print k,v
-
 	flog.write("Number of HLA Alleles=" + str(n_hla_alleles)  + "\n")
 	flog.write( "Number of 4 Digit HLA Alleles=" +  str(len(hla_total))  + "\n")
 	flog.write( "Number of HLA Reads=" + str(n_hla_reads) + "\n")
@@ -466,7 +410,6 @@ def main(argv):
 	flog.write("-" * 80  + "\n")
 	flog.write( "Scanning Mapped Reads\n")
 	# Read sequences from bam file
-	import pysam
 	bamfile = pysam.Samfile(options.bamfile, 'rb')
 	# init variables
 	bam_hla_reads = []
@@ -475,8 +418,7 @@ def main(argv):
 	bam_hla_allele_set = set([])
 
 	# start scanning Mapped Reads looking for exact reads found in  exons of specified HLA Genes
-	print
-	"Scanning mapped reads"
+	print("Scanning mapped reads")
 	gene_read_total = {}
 	for g in hla_genes_to_call:
 		gene_read_total[g] = 0
@@ -490,14 +432,11 @@ def main(argv):
 				my_seq = my_seq[0:read_len]
 				#  filtering out reads with very poor quality 
 				#  many filtered since they are not an exact match
-				if good_bq(str(alignedread.qual),
-						   options.bq) and alignedread.mapq > options.mapq and not alignedread.is_duplicate and not alignedread.is_unmapped:
+				if good_bq(str(alignedread.qual), options.bq) and alignedread.mapq > options.mapq and not alignedread.is_duplicate and not alignedread.is_unmapped:
 					if str(my_seq) in hla_read:
 						if n_hla_genes(hla_read[str(my_seq)]) == 1:
 							if options.debug:  # and len(hla_read(str(my_seq))) ==1:
-								print
-								"my seq ", str(my_seq), "gene info", n_hla_genes(
-									hla_read[str(my_seq)]), "qual=", alignedread.qual, "Alleles=", hla_read[str(my_seq)]
+								print( "my seq " + str(my_seq) + "gene info" + str(n_hla_genes(hla_read[str(my_seq)])) + "qual=" + str(alignedread.qual) + "Alleles=" + str(hla_read[str(my_seq)]) )
 							exon_reads += 1
 							bam_hla_reads.append(str(my_seq))
 							read_hla_alleles = hla_read.get(str(my_seq))
@@ -506,14 +445,10 @@ def main(argv):
 							for a in read_hla_alleles:
 								mapped_read_total[a] = mapped_read_total.get(a, 0) + 1
 					reverse_comp = str(my_seq.reverse_complement())
-					#      print "my seqr", reverse_comp, "gene info",hla.n_hla_genes(hla_read[str(my_seq)]),hla_read[str(reverse_comp)]      
 					if reverse_comp in hla_read:
 						if n_hla_genes(hla_read[reverse_comp]) == 1:
 							if options.debug:  # and  len(hla_read(reverse_comp)) ==1:
-								print
-								"my seqr", reverse_comp, "gene info", n_hla_genes(
-									hla_read[reverse_comp]), "qual=", alignedread.qual, "Alleles=", hla_read[
-									reverse_comp]
+								print("my seqr" + reverse_comp + "gene info" + str(n_hla_genes(hla_read[reverse_comp]) ) + "qual=" + str(alignedread.qual) + "Alleles=" + str(hla_read[reverse_comp]))
 							exon_reads += 1
 							bam_hla_reads.append(reverse_comp)
 							read_hla_alleles = hla_read.get(reverse_comp)
@@ -527,15 +462,12 @@ def main(argv):
 	mapped_reads = len(bam_hla_reads_set)
 
 	if options.unmapped_bamfile == "None":
-		print
-		"Skipping unmapped read scan"
+		print("Skipping unmapped read scan")
 	else:
-
 		# Now scan through all unmapped reads
 		# Finds exact match to known HLA gene exon region
 		unmapped_bamfile = pysam.Samfile(options.unmapped_bamfile, 'rb')
-		print
-		"Scanning unmapped reads"
+		print("Scanning unmapped reads")
 		for alignedread in unmapped_bamfile.fetch(until_eof=True):
 			#  if not "#" in str(alignedread.qual):
 			my_seq = Seq(alignedread.seq, IUPAC.unambiguous_dna)
@@ -547,9 +479,7 @@ def main(argv):
 				if str(my_seq) in hla_read:
 					if n_hla_genes(hla_read[str(my_seq)]) == 1:
 						if options.debug:
-							print
-							"my seq ", str(my_seq), "gene info", n_hla_genes(
-								hla_read[str(my_seq)]), "qual=", alignedread.qual, hla_read[str(my_seq)]
+							print("my seq " + str(my_seq) + "gene info" + str( n_hla_genes(hla_read[str(my_seq)]) ) + "qual=" + str(alignedread.qual) + str(hla_read[str(my_seq)]) )
 						bam_hla_reads.append(str(my_seq))
 						read_hla_alleles = hla_read.get(str(my_seq))
 						bam_hla_allele_set = bam_hla_allele_set | set(read_hla_alleles)
@@ -560,9 +490,7 @@ def main(argv):
 				if reverse_comp in hla_read:
 					if n_hla_genes(hla_read[reverse_comp]) == 1:
 						if options.debug:
-							print
-							"my seqr", reverse_comp, "gene info", n_hla_genes(
-								hla_read[reverse_comp]), "qual=", alignedread.qual, hla_read[reverse_comp]
+							print("my seqr" + reverse_comp + "gene info" + str(n_hla_genes(hla_read[reverse_comp])) + "qual=" + str(alignedread.qual) + str(hla_read[reverse_comp]) )
 						bam_hla_reads.append(reverse_comp)
 						read_hla_alleles = hla_read.get(reverse_comp)
 						bam_hla_allele_set = bam_hla_allele_set | set(read_hla_alleles)
@@ -574,17 +502,16 @@ def main(argv):
 
 	bam_hla_reads_set = set(bam_hla_reads)
 	unmapped_reads = len(bam_hla_reads_set) - mapped_reads
-	flog.write("-" * 80 + "\n")
-	flog.write( "Total Read Summary" + "\n")
-	flog.write( "HLA Genes to Call:" + ", ".join(hla_genes_to_call) + "\n")
-	flog.write( "Total Exact match reads from HLA Genes:" + str(len(bam_hla_reads)) + "\n")
-	flog.write("Unique Exact match reads from HLA Genes" + str(len(bam_hla_reads_set))  + "\n")
-	flog.write( "Reads mapped to " + str(len(bam_hla_allele_set)) + " HLA Alleles"  + "\n")
-	# print >>flog,"bam_hla_allele_set:",bam_hla_allele_set
+	flog.write( "-" * 80 + "\n" )
+	flog.write( "Total Read Summary" + "\n" )
+	flog.write( "HLA Genes to Call:" + ", ".join(hla_genes_to_call) + "\n" )
+	flog.write( "Total Exact match reads from HLA Genes:" + str(len(bam_hla_reads)) + "\n" )
+	flog.write( "Unique Exact match reads from HLA Genes" + str(len(bam_hla_reads_set))  + "\n" )
+	flog.write( "Reads mapped to " + str(len(bam_hla_allele_set)) + " HLA Alleles"  + "\n" )
 
 	hla_genotypes = []
 	hla_prob = AutoVivification()
-	#   print hla_read[r]
+
 	final = {}
 	flog.write("-" * 80  + "\n")
 	flog.write( "HLA Genotyping Results\n")
@@ -611,14 +538,9 @@ def main(argv):
 			# Reduces search space
 			if freq > (max_freq / 5.0):
 				allele_list[g] = allele_list[g] + [h]
-			# else:
-			# For debugging
-			#   print "Dropping allele",g,h,total_h_reads[h],total_g_reads[g],"percent",float(total_h_reads[h])/float(total_g_reads[g])
 
-	#     print allele_list[g]     
 	for g in hla_genes_to_call:
 		n = 0
-		# bam_gene_alleles=hla.alleles_in_gene(bam_hla_allele_set,g)
 		bam_gene_alleles = allele_list[g]
 		print
 		"Calculating Probabilities for", g, "Genotype Calls"
@@ -626,9 +548,7 @@ def main(argv):
 			for h2 in sorted(bam_gene_alleles):
 				if (h1 <= h2):
 					n = n + 1
-					#        prior_val=math.log(1-((1-hla_prior[h1])*(1-hla_prior[h2])))
 					prior_val = math.log(hla_prior[h1] * hla_prior[h2])
-					#        hla_prob[h1][h2]=prior_val
 					for r in bam_hla_reads_set:
 						num_hits = float(len(hla_alleles_in_gene(hla_read[r], g)))
 						if num_hits > 0:
@@ -642,8 +562,6 @@ def main(argv):
 							hla_prob[h1][h2] = hla_prob[h1].get(h2, prior_val) + numpy.log(genotype_prob)
 						else:
 							genotype_prob = min_prob
-							#                hla_prob[h1][h2]=hla_prob[h1].get(h2,prior_val)+numpy.log(genotype_prob) 
-		# print >>flog,g,"Genotypes probablities examined:",n
 
 		# find maximum genotype likelihood
 		max_prob = -99999
@@ -657,13 +575,10 @@ def main(argv):
 					hla_call = [h1, h2]
 				if (h1 <= h2):
 					total_prob = numpy.logaddexp(total_prob, hla_prob[h1][h2])
-		#                  print h1,h2,hla_prob[h1][h2],total_prob
 		# Printing Results to log file and hla results file
 		h1 = hla_call[0]
 		h2 = hla_call[1]
-		total_reads = mapped_read_total.get(h1, 0) + unmapped_read_total.get(h1, 0) + mapped_read_total.get(h2,
-																											0) + unmapped_read_total.get(
-			h2, 0)
+		total_reads = mapped_read_total.get(h1, 0) + unmapped_read_total.get(h1, 0) + mapped_read_total.get(h2, 0) + unmapped_read_total.get(h2, 0)
 		delta = max_prob - total_prob
 		pval = numpy.exp(delta)
 
@@ -675,19 +590,15 @@ def main(argv):
 			pval = "NA"
 
 		flog.write( basename + "\t" + study_id + "\t" + options.ethnicity + "\t" + g + "\t" + h1 + "\t" + h2 + "\t" + str(pval)[0:4] + "\t" + qc + "\t" + str(mapped_read_total.get(h1, 0)) + "\t" + 
-			str(unmapped_read_total.get(h1, 0)) + "\t" + str(mapped_read_total.get(h2, 0)) + "\t" + str(unmapped_read_total.get(h2, 0)) + "\t" + str(total_reads))
+			str(unmapped_read_total.get(h1, 0)) + "\t" + str(mapped_read_total.get(h2, 0)) + "\t" + str(unmapped_read_total.get(h2, 0)) + "\t" + str(total_reads) + "\n")
 		# write out hla results
-		line = [cn_id, basename, study_id, options.ethnicity, g, h1, h2, str(pval)[0:4], qc,
-				mapped_read_total.get(h1, 0), unmapped_read_total.get(h1, 0), mapped_read_total.get(h2, 0),
-				unmapped_read_total.get(h2, 0), total_reads]
-		# line=[basename,study_id,options.ethnicity,g,h1,h2, str(pval)[0:4], qc , mapped_read_total.get(h1,0),unmapped_read_total.get(h1,0),mapped_read_total.get(h2,0),unmapped_read_total.get(h2,0),total_reads,gene_read_total[g]]
-
+		line = [cn_id, basename, study_id, options.ethnicity, g, h1, h2, str(pval)[0:4], qc, mapped_read_total.get(h1, 0), unmapped_read_total.get(h1, 0), mapped_read_total.get(h2, 0), unmapped_read_total.get(h2, 0), total_reads]
 		out.writerow(line)
+
 		# store final call  
 		final[g] = hla_call
 
 		# print detailed results to log
-
 		if pval < 0.80:
 			for h1 in sorted(bam_gene_alleles):
 				for h2 in sorted(bam_gene_alleles):
@@ -695,8 +606,8 @@ def main(argv):
 						pval_other = numpy.exp(hla_prob[h1][h2] - total_prob)
 						if (pval_other > 0.05 and pval_other < pval):
 							flog.write(basename + "	" + study_id + "	" + options.ethnicity + "	" + g + "	" + h1 + "	" + h2 + "	" + str(pval_other)[0:4] + "	" + qc + "	"
-								+ str(mapped_read_total[h1]) + "	" + str(unmapped_read_total[h1]) + "	" + str(mapped_read_total[h2]) + "	" + str(unmapped_read_total[h2]) + "	" + str(total_reads))
-	# Print Ped file
+								+ str(mapped_read_total[h1]) + "	" + str(unmapped_read_total.get(h1,0)) + "	" + str(mapped_read_total[h2]) + "	" + str(unmapped_read_total.get(h2,0)) + "	" + str(total_reads) + "\n")
+
 
 	flog.close()
 	fout.close()
@@ -711,12 +622,9 @@ def main(argv):
 	out.writerow(line)
 	fdose.close()
 
-	print
-	"HLA Genotypes written to file:", prefix + ".txt"
-	print
-	"HLA Run Log written to file:  ", prefix + ".log"
-	print
-	"HLA Doses written to file:    ", prefix + ".dose"
+	print("HLA Genotypes written to file: " + prefix + ".txt")
+	print("HLA Run Log written to file:   " + prefix + ".log")
+	print("HLA Doses written to file:     " + prefix + ".dose")
 	exit(0)
 
 
