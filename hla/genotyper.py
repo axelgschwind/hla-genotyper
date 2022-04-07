@@ -143,9 +143,10 @@ def hla_freq(ethnicity, gene):
 	ETHNIC_PRIORS = os.path.join(this_dir, "data/ethnic_priors.txt")
 	prior = {}
 	# with open('data/ethnic_priors.txt', 'rb') as f:
-	with open(ETHNIC_PRIORS, 'rb') as f:
+	with open(ETHNIC_PRIORS, 'r') as f:
 		reader = csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE,
 								fieldnames=["ethnicity", "gene", "allele", "freq"])
+		print(reader)
 		for row in reader:
 			if (ethnicity == row["ethnicity"]):
 				#                         print row["ethnicity"], row["gene"], row["allele"],row["freq"]
@@ -157,7 +158,7 @@ def hla_freq(ethnicity, gene):
 	#                          prior[get_hla_gene(row["allele"])][row["allele"]]=float(row["freq"])
 	#                          print  row["allele"],prior[row["allele"]]
 	f.close()
-	sorted_prior = sorted(prior.iteritems(), key=operator.itemgetter(0))
+	sorted_prior = sorted(prior.items(), key=operator.itemgetter(0))
 	return prior
 
 
@@ -165,7 +166,7 @@ def hla_loci(ethnicity, gene):
 	this_dir, this_filename = os.path.split(__file__)
 	ETHNIC_PRIORS = os.path.join(this_dir, "data/ethnic_priors.txt")
 	hla_loci = set([])
-	with open(ETHNIC_PRIORS, 'rb') as f:
+	with open(ETHNIC_PRIORS, 'r') as f:
 		reader = csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE,
 								fieldnames=["ethnicity", "gene", "allele", "freq"])
 		for row in reader:
@@ -199,7 +200,7 @@ def hla_alleles_in_gene(alleles, want_gene):
 def hla_exon_region(gene, exon, EXON_INFO):
 	start = 0;
 	stop = 0;
-	with open(EXON_INFO, 'rb') as f:
+	with open(EXON_INFO, 'r') as f:
 		reader = csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE,
 								fieldnames=["gene", "exon", "chr", "start", "stop"])
 		for row in reader:
@@ -350,11 +351,12 @@ def main(argv):
 		 "a1+a2"])
 	flog = open(prefix + ".log", "w")
 	fdose = open(prefix + ".dose", "w")
-	print >> flog, "Sample=", study_id
-	print >> flog, "BAM input file to Scan (mapped reads)  :", options.bamfile
-	print >> flog, "BAM input file to Scan (unmapped reads):", options.unmapped_bamfile
-	print >> flog, "Ethnicity:", options.ethnicity
-	print >> flog, "Base Quality Cutoff:", options.bq
+	flog.write("Sample=" + study_id + "\n")
+	flog.write("BAM input file to Scan (mapped reads)  :" + options.bamfile + "\n")
+	flog.write("BAM input file to Scan (unmapped reads):" + options.unmapped_bamfile + "\n")
+	flog.write("Ethnicity:" + options.ethnicity + "\n")
+	flog.write("Base Quality Cutoff:" + str(options.bq) + "\n")
+
 
 	chr6 = "6"
 	if is_hg_ref(options.bamfile):
@@ -366,11 +368,11 @@ def main(argv):
 		hla_genes_to_call = hla_loci(options.ethnicity, gene=options.gene)
 	else:
 		hla_genes_to_call = ["HLA-" + options.gene]
-	print >> flog, "HLA Loci to call: ", hla_genes_to_call
+	flog.write("HLA Loci to call: " + ", ".join(hla_genes_to_call) + "\n")
 	want_exons = {}
 	for g in hla_genes_to_call:
 		want_exons[g] = hla_typing_exons(g)
-		print >> flog, "Exons read for genotyping ", g, ": ", want_exons[g]
+		flog.write("Exons read for genotyping " + g + ": " + ", ".join(want_exons[g]) + "\n")
 	# want_exons=hla.typing_exons("HLA-"+options.gene)
 
 	# print "SM:",SM(options.bamfile)
@@ -381,12 +383,12 @@ def main(argv):
 
 	if options.readlen == 0:
 		options.readlen = read_length(options.bamfile)
-	print >> flog, "Read lengths:", options.readlen
+	flog.write("Read lengths:" + str(options.readlen)  + "\n")
 	read_len = options.readlen
 	# print >>flog,"Verbose setting:",options.verbose
 	this_dir, this_filename = os.path.split(__file__)
 	HLA_DATA = os.path.join(this_dir, "data/hla.dat")
-	print >> flog, "IMGT Database=", HLA_DATA
+	flog.write("IMGT Database=" + HLA_DATA + "\n")
 
 	# init variables
 	hla_want = hla_prior.keys()
@@ -457,12 +459,12 @@ def main(argv):
 	#                 for k,v in hla_read.iteritems():
 	#                   print k,v
 
-	print >> flog, "Number of HLA Alleles=", n_hla_alleles
-	print >> flog, "Number of 4 Digit HLA Alleles=", len(hla_total)
-	print >> flog, "Number of HLA Reads=", n_hla_reads
-	print >> flog, "N unique Reads=", len(hla_read)
-	print >> flog, "-" * 80
-	print >> flog, "Scanning Mapped Reads"
+	flog.write("Number of HLA Alleles=" + str(n_hla_alleles)  + "\n")
+	flog.write( "Number of 4 Digit HLA Alleles=" +  str(len(hla_total))  + "\n")
+	flog.write( "Number of HLA Reads=" + str(n_hla_reads) + "\n")
+	flog.write( "N unique Reads=" + str(len(hla_read)) + "\n")
+	flog.write("-" * 80  + "\n")
+	flog.write( "Scanning Mapped Reads\n")
 	# Read sequences from bam file
 	import pysam
 	bamfile = pysam.Samfile(options.bamfile, 'rb')
@@ -480,7 +482,7 @@ def main(argv):
 		gene_read_total[g] = 0
 		for exon_number in want_exons[g]:
 			[start, stop] = hla_exon_region(g, exon_number, EXON_INFO)
-			print >> flog, "Scanning mapped reads for exon ", exon_number, " gene:", g, " start:", start, " stop:", stop,
+			flog.write("Scanning mapped reads for exon " + str(exon_number) + " gene:" + g + " start:" + str(start) + " stop:" + str(stop)  + "\n")
 			exon_reads = 0
 			for alignedread in bamfile.fetch(chr6, start, stop):
 				my_seq = Seq(alignedread.seq, IUPAC.unambiguous_dna)
@@ -518,7 +520,7 @@ def main(argv):
 							bam_hla_allele_set = bam_hla_allele_set | set(read_hla_alleles)
 							for a in read_hla_alleles:
 								mapped_read_total[a] = mapped_read_total.get(a, 0) + 1
-			print >> flog, "N mapped reads=", exon_reads
+			flog.write("N mapped reads=" + str(exon_reads) + "\n")
 			gene_read_total[g] = gene_read_total[g] + exon_reads
 	bamfile.close()
 	bam_hla_reads_set = set(bam_hla_reads)
@@ -572,21 +574,21 @@ def main(argv):
 
 	bam_hla_reads_set = set(bam_hla_reads)
 	unmapped_reads = len(bam_hla_reads_set) - mapped_reads
-	print >> flog, "-" * 80
-	print >> flog, "Total Read Summary"
-	print >> flog, "HLA Genes to Call:", hla_genes_to_call
-	print >> flog, "Total Exact match reads from HLA Genes:", len(bam_hla_reads)
-	print >> flog, "Unique Exact match reads from HLA Genes", len(bam_hla_reads_set)
-	print >> flog, "Reads mapped to " + str(len(bam_hla_allele_set)) + " HLA Alleles"
+	flog.write("-" * 80 + "\n")
+	flog.write( "Total Read Summary" + "\n")
+	flog.write( "HLA Genes to Call:" + ", ".join(hla_genes_to_call) + "\n")
+	flog.write( "Total Exact match reads from HLA Genes:" + str(len(bam_hla_reads)) + "\n")
+	flog.write("Unique Exact match reads from HLA Genes" + str(len(bam_hla_reads_set))  + "\n")
+	flog.write( "Reads mapped to " + str(len(bam_hla_allele_set)) + " HLA Alleles"  + "\n")
 	# print >>flog,"bam_hla_allele_set:",bam_hla_allele_set
 
 	hla_genotypes = []
 	hla_prob = AutoVivification()
 	#   print hla_read[r]
 	final = {}
-	print >> flog, "-" * 80
-	print >> flog, "HLA Genotyping Results"
-	print >> flog, "#CN", "bam file", "sample", "ethnicity", "gene", "a1", "a2", "pp", "qual", "a1 mr", "a1 ur", "a2 mr", "a2 ur", "a1+a2"
+	flog.write("-" * 80  + "\n")
+	flog.write( "HLA Genotyping Results\n")
+	flog.write("#CN\tbam\tfile\tsample\tethnicity\tgene\ta1\ta2\tpp\tqual\ta1 mr\ta1 ur\ta2 mr\ta2 ur\ta1+a2\n")
 	min_prob = 0.01
 	total_g_reads = {}
 	total_h_reads = {}
@@ -672,9 +674,8 @@ def main(argv):
 			qc = "Low Coverage"
 			pval = "NA"
 
-		print >> flog, basename, study_id, options.ethnicity, g, h1, h2, str(pval)[0:4], qc, mapped_read_total.get(h1,
-																												   0), unmapped_read_total.get(
-			h1, 0), mapped_read_total.get(h2, 0), unmapped_read_total.get(h2, 0), total_reads
+		flog.write( basename + "\t" + study_id + "\t" + options.ethnicity + "\t" + g + "\t" + h1 + "\t" + h2 + "\t" + str(pval)[0:4] + "\t" + qc + "\t" + str(mapped_read_total.get(h1, 0)) + "\t" + 
+			str(unmapped_read_total.get(h1, 0)) + "\t" + str(mapped_read_total.get(h2, 0)) + "\t" + str(unmapped_read_total.get(h2, 0)) + "\t" + str(total_reads))
 		# write out hla results
 		line = [cn_id, basename, study_id, options.ethnicity, g, h1, h2, str(pval)[0:4], qc,
 				mapped_read_total.get(h1, 0), unmapped_read_total.get(h1, 0), mapped_read_total.get(h2, 0),
@@ -693,9 +694,8 @@ def main(argv):
 					if h1 <= h2:
 						pval_other = numpy.exp(hla_prob[h1][h2] - total_prob)
 						if (pval_other > 0.05 and pval_other < pval):
-							print >> flog, basename, study_id, options.ethnicity, g, h1, h2, str(pval_other)[0:4], qc, \
-							mapped_read_total[h1], unmapped_read_total[h1], mapped_read_total[h2], unmapped_read_total[
-								h2], total_reads
+							flog.write(basename + "	" + study_id + "	" + options.ethnicity + "	" + g + "	" + h1 + "	" + h2 + "	" + str(pval_other)[0:4] + "	" + qc + "	"
+								+ str(mapped_read_total[h1]) + "	" + str(unmapped_read_total[h1]) + "	" + str(mapped_read_total[h2]) + "	" + str(unmapped_read_total[h2]) + "	" + str(total_reads))
 	# Print Ped file
 
 	flog.close()
