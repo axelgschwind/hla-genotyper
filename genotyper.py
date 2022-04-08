@@ -6,15 +6,15 @@
 import os
 import sys
 import math
-import pysam
-import sys
-import numpy
 import csv
 import operator
+from optparse import OptionParser
+import pysam
+import numpy
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
-from optparse import OptionParser
+
 
 def good_bq(read, cutoff):
 	for b in read:
