@@ -120,7 +120,7 @@ class AutoVivification(dict):
 			return value
 
 
-def hla_freq(ethnicity, gene):
+def hla_freq(ethnicity, genes):
 	this_dir, this_filename = os.path.split(__file__)
 	ETHNIC_PRIORS = os.path.join(this_dir, "data/ethnic_priors.txt")
 	prior = {}
@@ -129,9 +129,9 @@ def hla_freq(ethnicity, gene):
 								fieldnames=["ethnicity", "gene", "allele", "freq"])
 		for row in reader:
 			if (ethnicity == row["ethnicity"]):
-				if gene == row["gene"]:
+				if row["gene"] in genes:
 					prior[row["allele"]] = float(row["freq"])
-				elif gene == "all":
+				elif genes == "all":
 					prior[row["allele"]] = float(row["freq"])
 	f.close()
 	sorted_prior = sorted(prior.items(), key=operator.itemgetter(0))
@@ -224,7 +224,7 @@ def main(argv):
 					  help="To specifiy Sample ID for reports")
 	parser.add_option("-l", "--len", action="store", type="int", dest="readlen", default=0,
 					  help="READ Length (optional)  [default: %default]")
-	parser.add_option("-g", "--gene", action="store", dest="gene", default="all")
+	parser.add_option("-g", "--genes", action="store", dest="genes", default="A,B,C", help="Comma-separated HLA-genes to be calculated (A,B,C,...). Use \"all\" for all knownloci.")
 
 	(options, args) = parser.parse_args()
 	# check options 
@@ -288,17 +288,20 @@ def main(argv):
 	flog.write("Ethnicity:" + options.ethnicity + "\n")
 	flog.write("Base Quality Cutoff:" + str(options.bq) + "\n")
 
-
 	chr6 = "6"
 	if is_hg_ref(options.bamfile):
 		chr6 = "chr6"
 	EXON_INFO = os.path.join(this_dir, "".join(["data/exon_info_", options.ref, ".txt"]))
 
-	hla_prior = hla_freq(ethnicity=options.ethnicity, gene=options.gene)
-	if options.gene == "all":
-		hla_genes_to_call = hla_loci(options.ethnicity, gene=options.gene)
+	hla_prior = {}
+	if options.genes == "all":
+		hla_prior = hla_freq(ethnicity=options.ethnicity, genes=options.genes)
+		hla_genes_to_call = hla_loci(options.ethnicity, gene=options.genes)
 	else:
-		hla_genes_to_call = ["HLA-" + options.gene]
+		hla_genes_to_call = options.genes.split(",");
+		hla_prior = hla_freq(ethnicity=options.ethnicity, genes=hla_genes_to_call)
+		hla_genes_to_call = ["HLA-" + gene for gene in hla_genes_to_call]
+	
 	flog.write("HLA Loci to call: " + ", ".join(hla_genes_to_call) + "\n")
 	want_exons = {}
 	for g in hla_genes_to_call:
