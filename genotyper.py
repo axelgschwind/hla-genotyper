@@ -14,7 +14,6 @@ import operator
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
-from Bio.SeqFeature import SeqFeature, FeatureLocation
 from optparse import OptionParser
 
 def good_bq(read, cutoff):
@@ -224,7 +223,7 @@ def main(argv):
 					  help="To specifiy Sample ID for reports")
 	parser.add_option("-l", "--len", action="store", type="int", dest="readlen", default=0,
 					  help="READ Length (optional)  [default: %default]")
-	parser.add_option("-g", "--genes", action="store", dest="genes", default="A,B,C", help="Comma-separated HLA-genes to be calculated (A,B,C,...). Use \"all\" for all knownloci.")
+	parser.add_option("-g", "--genes", action="store", dest="genes", default="A,B,C", help="Comma-separated HLA-genes to be calculated (A,B,C,...). Use \"all\" for all known loci.")
 
 	(options, args) = parser.parse_args()
 	# check options 
@@ -301,7 +300,7 @@ def main(argv):
 		hla_genes_to_call = options.genes.split(",");
 		hla_prior = hla_freq(ethnicity=options.ethnicity, genes=hla_genes_to_call)
 		hla_genes_to_call = ["HLA-" + gene for gene in hla_genes_to_call]
-	
+
 	flog.write("HLA Loci to call: " + ", ".join(hla_genes_to_call) + "\n")
 	want_exons = {}
 	for g in hla_genes_to_call:
