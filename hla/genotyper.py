@@ -104,18 +104,6 @@ def SM(filename):
 	return sm_id
 
 
-def CN(filename):
-	# get Center id from bam file
-	# get Center id from bam file (1000 Genomes Center use different Exome Kits)
-	bamfile = pysam.Samfile(filename, 'rb')
-	header = bamfile.header.copy()
-	cn_id = "NA"
-	if "CN" in header.keys():
-		cn_id = header["RG"][0].get("CN", "NA")
-	bamfile.close()
-	return cn_id
-
-
 def containsAny(str, set):
 	"""Check whether 'str' contains ANY of the chars in 'set'"""
 	return 1 in [c in str for c in set]
@@ -234,7 +222,6 @@ def main(argv):
 	parser.add_option("--genome", action="store_true", dest="genome", help="Indicates Whole Genome BAM file")
 	parser.add_option("-s", "--sample", action="store", type="string", dest="sample",
 					  help="To specifiy Sample ID for reports")
-	parser.add_option("--cn", action="store", type="string", dest="cn", default="None", help="Sequencing Center")
 	parser.add_option("-l", "--len", action="store", type="int", dest="readlen", default=0,
 					  help="READ Length (optional)  [default: %default]")
 	parser.add_option("-g", "--gene", action="store", dest="gene", default="all")
@@ -270,11 +257,7 @@ def main(argv):
 	else:
 		study_id = options.sample
 	print("Sample=" + study_id)
-	if options.cn == "None":
-		cn_id = CN(options.bamfile)
-	else:
-		cn_id = options.cn
-	print("Sequencing Center=" + cn_id)
+
 	# open log and output files
 	prefix = ""
 	if options.rnaseq:
@@ -297,7 +280,7 @@ def main(argv):
 	fout = open(prefix + ".txt", "w")
 	out = csv.writer(fout, delimiter="\t")
 	out.writerow(
-		["#CN", "BAM file", "sample", "ethnicity", "gene", "a1", "a2", "pval", "qual", "a1_reads", "a2_reads", "a1+a2"])
+		["#BAM file", "sample", "ethnicity", "gene", "a1", "a2", "pval", "qual", "a1_reads", "a2_reads", "a1+a2"])
 	flog = open(prefix + ".log", "w")
 	fdose = open(prefix + ".dose", "w")
 	flog.write("Sample=" + study_id + "\n")
@@ -462,7 +445,7 @@ def main(argv):
 	final = {}
 	flog.write("-" * 80  + "\n")
 	flog.write( "HLA Genotyping Results\n")
-	flog.write("#CN\tbam\tfile\tsample\tethnicity\tgene\ta1\ta2\tpp\tqual\ta1_reads\ta2_reads\ta1+a2\n")
+	flog.write("#bam\tfile\tsample\tethnicity\tgene\ta1\ta2\tpp\tqual\ta1_reads\ta2_reads\ta1+a2\n")
 	min_prob = 0.01
 	total_g_reads = {}
 	total_h_reads = {}
@@ -538,7 +521,7 @@ def main(argv):
 		flog.write( basename + "\t" + study_id + "\t" + options.ethnicity + "\t" + g + "\t" + h1 + "\t" + h2 + "\t" + str(pval)[0:4] + "\t" + qc + "\t" + str(mapped_read_total.get(h1, 0)) + "\t" + 
 			"\t" + str(mapped_read_total.get(h2, 0)) +  "\t" + str(total_reads) + "\n")
 		# write out hla results
-		line = [cn_id, basename, study_id, options.ethnicity, g, h1, h2, str(pval)[0:4], qc, mapped_read_total.get(h1, 0),  mapped_read_total.get(h2, 0),  total_reads]
+		line = [basename, study_id, options.ethnicity, g, h1, h2, str(pval)[0:4], qc, mapped_read_total.get(h1, 0),  mapped_read_total.get(h2, 0),  total_reads]
 		out.writerow(line)
 
 		# store final call  
