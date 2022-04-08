@@ -188,8 +188,7 @@ def hla_exon_region(gene, exon, EXON_INFO):
 	start = 0;
 	stop = 0;
 	with open(EXON_INFO, 'r') as f:
-		reader = csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE,
-								fieldnames=["gene", "exon", "chr", "start", "stop"])
+		reader = csv.DictReader(f, delimiter='\t', quoting=csv.QUOTE_NONE, fieldnames=["gene", "exon", "chr", "start", "stop"])
 		for row in reader:
 			if gene == row["gene"]:
 				if exon == row["exon"]:
@@ -219,8 +218,6 @@ def main(argv):
 	usage = "usage: %prog [options] BAMFILE"
 	desc = "hla-genotyper predicts HLA genotypes from RNA-Seq and DNA-Seq bam files."
 	parser = OptionParser(usage=usage, description=desc)
-	parser.add_option("-u", "--unmapped_bam", action="store", type="string", default="None", dest="unmapped_bamfile",
-					  help="BAM file of unmapped READs (optional)")
 	parser.add_option("-e", "--ethnicity", action="store", dest="ethnicity", type='choice',
 					  choices=['EUR', 'AFA', 'HIS', 'API', 'UNK'],
 					  help="Ethnicity of sample: EUR,AFA,HIS,API,UNK (required)")
@@ -268,11 +265,6 @@ def main(argv):
 		print("ERROR: ethnicity is a required parameter")
 		print("usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam")
 		exit(-1)
-	if options.unmapped_bamfile != "None":
-		if os.path.isfile(options.unmapped_bamfile) is False:
-			print("ERROR: The unmapped bam file specified ", options.unmapped_bamfile, "was not found.")
-			parser.print_help()
-			exit(-1)
 	if options.sample == None:
 		study_id = SM(options.bamfile)
 	else:
@@ -305,13 +297,11 @@ def main(argv):
 	fout = open(prefix + ".txt", "w")
 	out = csv.writer(fout, delimiter="\t")
 	out.writerow(
-		["#CN", "BAM file", "sample", "ethnicity", "gene", "a1", "a2", "pp", "qual", "a1 mr", "a1 ur", "a2 mr", "a2 ur",
-		 "a1+a2"])
+		["#CN", "BAM file", "sample", "ethnicity", "gene", "a1", "a2", "pval", "qual", "a1_reads", "a2_reads", "a1+a2"])
 	flog = open(prefix + ".log", "w")
 	fdose = open(prefix + ".dose", "w")
 	flog.write("Sample=" + study_id + "\n")
 	flog.write("BAM input file to Scan (mapped reads)  :" + options.bamfile + "\n")
-	flog.write("BAM input file to Scan (unmapped reads):" + options.unmapped_bamfile + "\n")
 	flog.write("Ethnicity:" + options.ethnicity + "\n")
 	flog.write("Base Quality Cutoff:" + str(options.bq) + "\n")
 
@@ -413,7 +403,6 @@ def main(argv):
 	# init variables
 	bam_hla_reads = []
 	mapped_read_total = AutoVivification()
-	unmapped_read_total = AutoVivification()
 	bam_hla_allele_set = set([])
 
 	# start scanning Mapped Reads looking for exact reads found in  exons of specified HLA Genes
@@ -460,47 +449,6 @@ def main(argv):
 	bam_hla_reads_set = set(bam_hla_reads)
 	mapped_reads = len(bam_hla_reads_set)
 
-	if options.unmapped_bamfile == "None":
-		print("Skipping unmapped read scan")
-	else:
-		# Now scan through all unmapped reads
-		# Finds exact match to known HLA gene exon region
-		unmapped_bamfile = pysam.Samfile(options.unmapped_bamfile, 'rb')
-		print("Scanning unmapped reads")
-		for alignedread in unmapped_bamfile.fetch(until_eof=True):
-			#  if not "#" in str(alignedread.qual):
-			my_seq = Seq(alignedread.seq, IUPAC.unambiguous_dna)
-			my_seq = my_seq[0:read_len]
-			if good_bq(str(alignedread.qual), options.bq) and not alignedread.is_duplicate and alignedread.is_unmapped:
-
-				#      print "my seq ", str(my_seq)
-				reverse_comp = str(my_seq.reverse_complement())
-				if str(my_seq) in hla_read:
-					if n_hla_genes(hla_read[str(my_seq)]) == 1:
-						if options.debug:
-							print("my seq " + str(my_seq) + "gene info" + str( n_hla_genes(hla_read[str(my_seq)]) ) + "qual=" + str(alignedread.qual) + str(hla_read[str(my_seq)]) )
-						bam_hla_reads.append(str(my_seq))
-						read_hla_alleles = hla_read.get(str(my_seq))
-						bam_hla_allele_set = bam_hla_allele_set | set(read_hla_alleles)
-						for a in read_hla_alleles:
-							unmapped_read_total[a] = unmapped_read_total.get(a, 0) + 1
-							g = get_hla_gene(a)
-						gene_read_total[g] = gene_read_total[g] + 1
-				if reverse_comp in hla_read:
-					if n_hla_genes(hla_read[reverse_comp]) == 1:
-						if options.debug:
-							print("my seqr" + reverse_comp + "gene info" + str(n_hla_genes(hla_read[reverse_comp])) + "qual=" + str(alignedread.qual) + str(hla_read[reverse_comp]) )
-						bam_hla_reads.append(reverse_comp)
-						read_hla_alleles = hla_read.get(reverse_comp)
-						bam_hla_allele_set = bam_hla_allele_set | set(read_hla_alleles)
-						for a in read_hla_alleles:
-							unmapped_read_total[a] = unmapped_read_total.get(a, 0) + 1
-							g = get_hla_gene(a)
-						gene_read_total[g] = gene_read_total[g] + 1
-		unmapped_bamfile.close()
-
-	bam_hla_reads_set = set(bam_hla_reads)
-	unmapped_reads = len(bam_hla_reads_set) - mapped_reads
 	flog.write( "-" * 80 + "\n" )
 	flog.write( "Total Read Summary" + "\n" )
 	flog.write( "HLA Genes to Call:" + ", ".join(hla_genes_to_call) + "\n" )
@@ -514,7 +462,7 @@ def main(argv):
 	final = {}
 	flog.write("-" * 80  + "\n")
 	flog.write( "HLA Genotyping Results\n")
-	flog.write("#CN\tbam\tfile\tsample\tethnicity\tgene\ta1\ta2\tpp\tqual\ta1 mr\ta1 ur\ta2 mr\ta2 ur\ta1+a2\n")
+	flog.write("#CN\tbam\tfile\tsample\tethnicity\tgene\ta1\ta2\tpp\tqual\ta1_reads\ta2_reads\ta1+a2\n")
 	min_prob = 0.01
 	total_g_reads = {}
 	total_h_reads = {}
@@ -524,8 +472,8 @@ def main(argv):
 		total_g_reads[g] = 0
 		bam_gene_alleles = hla_alleles_in_gene(bam_hla_allele_set, g)
 		for h in sorted(bam_gene_alleles):
-			total_g_reads[g] = total_g_reads[g] + mapped_read_total.get(h, 0) + unmapped_read_total.get(h, 0)
-			total_h_reads[h] = mapped_read_total.get(h, 0) + unmapped_read_total.get(h, 0)
+			total_g_reads[g] = total_g_reads[g] + mapped_read_total.get(h, 0)
+			total_h_reads[h] = mapped_read_total.get(h, 0)
 		max_freq = 0.0
 		for h in sorted(bam_gene_alleles):
 			freq = float(total_h_reads[h]) / float(total_g_reads[g])
@@ -576,10 +524,9 @@ def main(argv):
 		# Printing Results to log file and hla results file
 		h1 = hla_call[0]
 		h2 = hla_call[1]
-		total_reads = mapped_read_total.get(h1, 0) + unmapped_read_total.get(h1, 0) + mapped_read_total.get(h2, 0) + unmapped_read_total.get(h2, 0)
+		total_reads = mapped_read_total.get(h1, 0) +  mapped_read_total.get(h2, 0)
 		delta = max_prob - total_prob
 		pval = numpy.exp(delta)
-		print(pval)
 
 		qc = "Pass"
 		if pval < 0.66:  # Ambiguous set for below 0.66
@@ -589,9 +536,9 @@ def main(argv):
 			pval = math.nan
 
 		flog.write( basename + "\t" + study_id + "\t" + options.ethnicity + "\t" + g + "\t" + h1 + "\t" + h2 + "\t" + str(pval)[0:4] + "\t" + qc + "\t" + str(mapped_read_total.get(h1, 0)) + "\t" + 
-			str(unmapped_read_total.get(h1, 0)) + "\t" + str(mapped_read_total.get(h2, 0)) + "\t" + str(unmapped_read_total.get(h2, 0)) + "\t" + str(total_reads) + "\n")
+			"\t" + str(mapped_read_total.get(h2, 0)) +  "\t" + str(total_reads) + "\n")
 		# write out hla results
-		line = [cn_id, basename, study_id, options.ethnicity, g, h1, h2, str(pval)[0:4], qc, mapped_read_total.get(h1, 0), unmapped_read_total.get(h1, 0), mapped_read_total.get(h2, 0), unmapped_read_total.get(h2, 0), total_reads]
+		line = [cn_id, basename, study_id, options.ethnicity, g, h1, h2, str(pval)[0:4], qc, mapped_read_total.get(h1, 0),  mapped_read_total.get(h2, 0),  total_reads]
 		out.writerow(line)
 
 		# store final call  
@@ -605,7 +552,7 @@ def main(argv):
 						pval_other = numpy.exp(hla_prob[h1][h2] - total_prob)
 						if (pval_other > 0.05 and pval_other < pval):
 							flog.write(basename + "	" + study_id + "	" + options.ethnicity + "	" + g + "	" + h1 + "	" + h2 + "	" + str(pval_other)[0:4] + "	" + qc + "	"
-								+ str(mapped_read_total[h1]) + "	" + str(unmapped_read_total.get(h1,0)) + "	" + str(mapped_read_total[h2]) + "	" + str(unmapped_read_total.get(h2,0)) + "	" + str(total_reads) + "\n")
+								+ str(mapped_read_total[h1]) + "	" + str(mapped_read_total[h2]) + "	" + str(total_reads) + "\n")
 
 
 	flog.close()
