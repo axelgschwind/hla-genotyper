@@ -133,7 +133,6 @@ def hla_freq(ethnicity, genes):
 				elif genes == "all":
 					prior[row["allele"]] = float(row["freq"])
 	f.close()
-	sorted_prior = sorted(prior.items(), key=operator.itemgetter(0))
 	return prior
 
 
@@ -366,7 +365,6 @@ def main(argv):
 				else:
 					# loop through exon  sequences used to predict HLA reads
 					exons = [f for f in seq_record.features if f.type == "exon"]
-					introns = [f for f in seq_record.features if f.type == "intron"]
 					extra = 0
 					for e in exons:
 						if e.qualifiers["number"][0] in want_exons[hla_gene]:
@@ -441,7 +439,6 @@ def main(argv):
 	flog.write( "Unique Exact match reads from HLA Genes" + str(len(bam_hla_reads_set))  + "\n" )
 	flog.write( "Reads mapped to " + str(len(bam_hla_allele_set)) + " HLA Alleles"  + "\n" )
 
-	hla_genotypes = []
 	hla_prob = AutoVivification()
 
 	final = {}
