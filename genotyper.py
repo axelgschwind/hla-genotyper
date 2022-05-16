@@ -13,7 +13,6 @@ import pysam
 import numpy
 from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.Alphabet import IUPAC
 
 
 def good_bq(read, cutoff):
@@ -398,7 +397,7 @@ def main(argv):
 			flog.write("Scanning mapped reads for exon " + str(exon_number) + " gene:" + g + " start:" + str(start) + " stop:" + str(stop)  + "\n")
 			exon_reads = 0
 			for alignedread in bamfile.fetch(chr6, start, stop):
-				my_seq = Seq(alignedread.seq, IUPAC.unambiguous_dna)
+				my_seq = Seq(alignedread.seq)
 				# for archaic genomes-trim to some standard length
 				my_seq = my_seq[0:read_len]
 				#  filtering out reads with very poor quality 
