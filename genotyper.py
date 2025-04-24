@@ -49,13 +49,19 @@ def dose(h, h1, h2):
 		d += 1
 	return d
 
+def read_file(filename, ref="-"):
+	if ref == "-":
+		return pysam.AlignmentFile(filename, 'rb')
+	else:
+		return pysam.AlignmentFile(filename, 'rc', reference_filename=ref)
 
-def read_length(filename):
+
+def read_length(filename, ref="-"):
 	#
 	# determine read length of bam files reads (Take max of first 200 records)
 	#
 	mylength = 0
-	bamfile = pysam.Samfile(filename, 'rb')
+	bamfile = read_file(filename, ref)
 	n = 0
 	for alignedread in bamfile.fetch(until_eof=True):
 		mylength = max(alignedread.rlen, mylength)
@@ -66,12 +72,12 @@ def read_length(filename):
 	return mylength
 
 
-def is_hg_ref(filename):
+def is_hg_ref(filename, ref="-"):
 	#
 	# determine read length of bam files reads (Take max of first 200 records)
 	#
 	mylength = 0
-	bamfile = pysam.Samfile(filename, 'rb')
+	bamfile = read_file(filename,  ref)
 	n = 0
 	for alignedread in bamfile.fetch(until_eof=True):
 		n += 1
@@ -86,9 +92,9 @@ def is_hg_ref(filename):
 	return hg
 
 
-def SM(filename):
+def SM(filename, ref="-"):
 	# get sample id from bam file
-	bamfile = pysam.Samfile(filename, 'rb')
+	bamfile = read_file(filename, ref)
 	header = bamfile.header.copy()
 	sm_id = "0"
 	if "RG" in header.keys():
@@ -200,7 +206,7 @@ def main(argv):
 	HLA_DATA = os.path.join(this_dir, "data/hla.dat")
 	if len(argv) == 1:
 		argv.append("--help")
-	usage = "usage: %prog [options] BAMFILE"
+	usage = "usage: %prog [options] BAMFILE/CRAMFILE"
 	desc = "hla-genotyper predicts HLA genotypes from RNA-Seq and DNA-Seq bam files."
 	parser = OptionParser(usage=usage, description=desc)
 	parser.add_option("-e", "--ethnicity", action="store", dest="ethnicity", type='choice',
@@ -208,7 +214,7 @@ def main(argv):
 					  help="Ethnicity of sample: EUR,AFA,HIS,API,UNK (required)")
 	parser.add_option("-o", "--outdir", action="store", dest="outdir", type="string", help="Output directory")
 	parser.add_option("-r", "--reference", action="store", dest="ref", type='choice', choices=['37', '38'],
-					  default='37', help="Reference used for BAM alignment: 37 or 38 [default: %default])")
+					  default='38', help="Reference used for BAM alignment: 37 or 38 [default: %default])")
 	parser.add_option("-m", "--mapq", action="store", type="int", dest="mapq", default=20,
 					  help="Minimum mapping quality of aligned reads  [default: %default]")
 	parser.add_option("-q", "--qual", action="store", type="int", dest="bq", default=5,
@@ -222,6 +228,7 @@ def main(argv):
 	parser.add_option("-l", "--len", action="store", type="int", dest="readlen", default=0,
 					  help="READ Length (optional)  [default: %default]")
 	parser.add_option("-g", "--genes", action="store", dest="genes", default="A,B,C", help="Comma-separated HLA-genes to be calculated (A,B,C,...). Use \"all\" for all known loci.")
+	parser.add_option("--ref_fasta", action="store", type="string", dest="ref_fasta", default="-", help="Path to reference fasta file for CRAM. If not specified, hla-genotyper assumes a BAM file.")
 
 	(options, args) = parser.parse_args()
 	# check options 
@@ -250,7 +257,7 @@ def main(argv):
 		print("usage: hla-genotyper -e [EUR,AFA,API,HIS,UNK] [--genome,--rnaseq,--exome]  [options] myfile.bam")
 		exit(-1)
 	if options.sample == None:
-		study_id = SM(options.bamfile)
+		study_id = SM(options.bamfile, options.ref_fasta)
 	else:
 		study_id = options.sample
 	print("Sample=" + study_id)
@@ -286,7 +293,7 @@ def main(argv):
 	flog.write("Base Quality Cutoff:" + str(options.bq) + "\n")
 
 	chr6 = "6"
-	if is_hg_ref(options.bamfile):
+	if is_hg_ref(options.bamfile, options.ref_fasta):
 		chr6 = "chr6"
 	EXON_INFO = os.path.join(this_dir, "".join(["data/exon_info_", options.ref, ".txt"]))
 
@@ -309,7 +316,7 @@ def main(argv):
 	print("Opening " + options.bamfile)
 
 	if options.readlen == 0:
-		options.readlen = read_length(options.bamfile)
+		options.readlen = read_length(options.bamfile, options.ref_fasta)
 	flog.write("Read lengths:" + str(options.readlen)  + "\n")
 	read_len = options.readlen
 
@@ -350,13 +357,13 @@ def main(argv):
 					for e in exons:
 						if e.qualifiers["number"][0] in want_exons[hla_gene]:
 							# splice exons together depending on whether on positive or negative strand                
-							if e.location.start.position > last_position:
+							if e.location.start > last_position:
 								exon_seq = exon_seq + str(
-									seq_record.seq[e.location.start.position: e.location.end.position])
+									seq_record.seq[e.location.start: e.location.end])
 							else:
 								exon_seq = str(
-									seq_record.seq[e.location.start.position: e.location.end.position]) + exon_seq
-							last_position = e.location.start.position
+									seq_record.seq[e.location.start: e.location.end]) + exon_seq
+							last_position = e.location.start
 					for i in range(0, len(exon_seq) - read_len + 1):
 						myread = exon_seq[i:i + read_len]
 						hla_read[myread][hla_4digit] = 1
@@ -367,8 +374,7 @@ def main(argv):
 					extra = 0
 					for e in exons:
 						if e.qualifiers["number"][0] in want_exons[hla_gene]:
-							exon_seq = seq_record.seq[
-									   e.location.start.position - extra: e.location.end.position + extra]
+							exon_seq = seq_record.seq[e.location.start - extra: e.location.end + extra]
 							for i in range(0, len(exon_seq) - read_len + 1):
 								myread = str(exon_seq[i:i + read_len])
 								hla_read[myread][hla_4digit] = 1
@@ -381,7 +387,7 @@ def main(argv):
 	flog.write("-" * 80  + "\n")
 	flog.write( "Scanning Mapped Reads\n")
 	# Read sequences from bam file
-	bamfile = pysam.Samfile(options.bamfile, 'rb')
+	bamfile = read_file(options.bamfile, ref=options.ref_fasta)
 	# init variables
 	bam_hla_reads = []
 	mapped_read_total = AutoVivification()

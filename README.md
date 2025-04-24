@@ -7,3 +7,4 @@ This fork is a python3 implementation of the tool. The tool works stand-alone an
 * numpy
 * pysam
 * Bio
+* biopython
